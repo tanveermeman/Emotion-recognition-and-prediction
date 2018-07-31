@@ -1,11 +1,24 @@
 import cv2
 import sys
+from datetime import datetime
 from em_model import EMR
+import matplotlib.pyplot as plt; plt.rcdefaults()
 import numpy as np
+import matplotlib.pyplot as plt
+counter=0
+running=True
+startTime=0.0
+timeElapsed=0.0
+startCounter=False
+endCounter=False
+objects=('angry','disgusted','fearful','happy','sad','surprised','neutral') # static tuples
+y_pos=np.arange(len(objects))
+performance=[0,0,0,0,0,0,0] #init count of detected emotions.
+
 EMOTIONS = ['angry', 'disgusted', 'fearful', 'happy', 'sad', 'surprised', 'neutral']
-
+#em_dict={"angry":0,"disgusted":0,"fearful":0,"happy":0,"sad":0,"surprised":0,"neutral":0}
 cascade_classifier = cv2.CascadeClassifier('haarcascade_files/haarcascade_frontalface_default.xml')
-
+stopped=False
 def brighten(data,b):
      datab = data * b
      return datab    
@@ -35,33 +48,45 @@ def format_image(image):
     return None
   return image
 
-network = EMR()
-network.build_network()
-
-video_capture = cv2.VideoCapture(0)
-font = cv2.FONT_HERSHEY_SIMPLEX
-
-feelings_faces = []
-for index, emotion in enumerate(EMOTIONS):
-  feelings_faces.append(cv2.imread('./emojis/' + emotion + '.png', -1))
-
-while True:
-  ret, frame = video_capture.read()
-  result = network.predict(format_image(frame))
-  if result is not None:
-    for index, emotion in enumerate(EMOTIONS):
-      cv2.putText(frame, emotion, (10, index * 20 + 20), cv2.FONT_HERSHEY_PLAIN, 0.5, (0, 255, 0), 1);
-      cv2.rectangle(frame, (130, index * 20 + 10), (130 + int(result[0][index] * 100), (index + 1) * 20 + 4), (255, 0, 0), -1)
-
-    face_image = feelings_faces[result[0].tolist().index(max(result[0]))]
-    for c in range(0, 3):
-      frame[200:320, 10:130, c] = face_image[:,:,c] * (face_image[:, :, 3] / 255.0) +  frame[200:320, 10:130, c] * (1.0 - face_image[:, :, 3] / 255.0)
-
-
-  cv2.imshow('Video', frame)
-
-  if cv2.waitKey(1) & 0xFF == ord('q'):
-    break
-
-video_capture.release()
-cv2.destroyAllWindows()
+def initcam(n):
+  network = EMR()
+  network.build_network()
+  video_capture = cv2.VideoCapture(0)
+  font = cv2.FONT_HERSHEY_SIMPLEX
+  feelings_faces = []
+  for index, emotion in enumerate(EMOTIONS):
+    feelings_faces.append(cv2.imread('./emojis/' + emotion + '.png', -1))
+  print "Starting Cam with Timer"
+  counter=0;
+  running=True
+  startTime=datetime.now()
+  while running==True:
+    timeElapsed =(datetime.now()-startTime).total_seconds()
+    if timeElapsed>n:
+     running=False
+    print "counter:"+str(timeElapsed)
+    ret, frame = video_capture.read()
+    result = network.predict(format_image(frame))
+    if result is not None:
+      for index, emotion in enumerate(EMOTIONS):
+        cv2.putText(frame, emotion, (50, index * 20 + 20), cv2.FONT_HERSHEY_PLAIN, 0.5, (0, 255, 0), 1);
+        cv2.rectangle(frame, (130, index * 20 + 10), (130 + int(result[0][index] * 100), (index + 1) * 20 + 4), (255, 0, 0), -1)
+      face_image = feelings_faces[result[0].tolist().index(max(result[0]))]
+      foundpos=result[0].tolist().index(max(result[0]))
+      print "value found="+str(foundpos)
+      performance[foundpos]+=1
+      counter+=1
+      for c in range(0, 3):
+        frame[200:320, 10:130, c] = face_image[:,:,c] * (face_image[:, :, 3] / 255.0) +  frame[200:320, 10:130, c] * (1.0 - face_image[:, :, 3] / 255.0)
+    cv2.imshow('Video', frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+      break
+  video_capture.release()
+  cv2.destroyAllWindows()
+secs=int(input("Number of seconds the timer should work:"))
+initcam(secs)
+plt.bar(y_pos,performance,align='center',alpha=0.5)
+plt.xticks(y_pos,objects)
+plt.ylabel('Emotion Recognized')
+plt.title('Emotion Bar Chart')
+plt.show()
