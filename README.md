@@ -27,7 +27,7 @@ python em_model.py.
 -> A prompt will be given to the user to enter the duration for how 
 long the application is supposed to run.
 -> The appplication will run for the given time and display real time
- feedback of the subjects emtions on the screen.
+ feedback of the subject's emotions on the screen.
 -> As well as the application will also give a well defined graphical
  representation of the subjects emotions through the
 period he/she was monitored.
